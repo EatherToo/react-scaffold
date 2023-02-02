@@ -1,0 +1,256 @@
+import path from 'path';
+import { Configuration as WebpackConfiguration, DefinePlugin, WebpackPluginInstance } from 'webpack';
+import CompressionPlugin from 'compression-webpack-plugin';
+import HtmlWebpackPlugin from 'html-webpack-plugin';
+import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
+import ESLintPlugin from 'eslint-webpack-plugin';
+import DotEnv from 'dotenv-webpack';
+import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin';
+import ReactRefreshPlugin from '@pmmmwh/react-refresh-webpack-plugin';
+import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
+import CopyPlugin from 'copy-webpack-plugin';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+//import OptimizeCssPlugin from 'optimize-css-assets-webpack-plugin';
+import UglifyjsPlugin from 'uglifyjs-webpack-plugin';
+import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
+
+// sentry上传sourceMap
+import SentryPlugin from '@sentry/webpack-plugin';
+import { Configuration as WebpackDevServerConfiguration } from 'webpack-dev-server';
+
+interface Configuration extends WebpackConfiguration {
+  devServer?: WebpackDevServerConfiguration;
+}
+
+const genConfig = (env: { mode: 'development' | 'test' | 'production'; sys: 'pc' | 'mobile' }) => {
+  const nodeEnv = process.env.NODE_ENV === 'development' ? 'development' : 'production';
+  const isDev = nodeEnv === 'development';
+  const isDebug = process.env.DEBUG === 'true';
+  const isAnalyze = process.env.Analyze === 'true';
+  const entryPath = env.sys === 'mobile' ? './src/indexMobile.tsx' : './src/index.tsx';
+  const outPath = env.sys === 'mobile' ? 'dist' : 'dist';
+
+  const isElectron = process.env.ELECTRON === 'true';
+  const tsConfigName = isElectron ? 'tsconfig.json' : 'tsconfig.web.json';
+
+  const plugins: WebpackPluginInstance[] = [
+    new HtmlWebpackPlugin({
+      template: './index.html',
+    }),
+    new ForkTsCheckerWebpackPlugin({
+      typescript: {
+        configFile: tsConfigName,
+      },
+      async: false,
+    }),
+    new ESLintPlugin({
+      extensions: ['js', 'jsx', 'ts', 'tsx'],
+    }),
+    // @ts-ignore
+    new DotEnv({
+      path: `.env.${env.mode}`,
+      defaults: '.env',
+    }),
+    new DefinePlugin({
+      'process.env.NODE_ENV': isDev ? '"development"' : '"production"',
+      'process.env.SENTRY_ENV': '"' + process.env.NODE_ENV + '"',
+      'process.env.DEBUG': '"' + process.env.DEBUG + '"',
+      'process.env.VITE_CLIENT_VERSION': '"' + Date.now() + '"',
+    }),
+  ];
+
+  if (process.env.SENTRY_ENV !== 'development') {
+    plugins.push(
+      new SentryPlugin({
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        release: process.env.RELEASE,
+        include: './dist',
+        org: 'lobby-universe-inc',
+        project: 'lobby-web',
+        setCommits: {
+          auto: true,
+          ignoreEmpty: true,
+          ignoreMissing: true,
+        },
+      }),
+    );
+  }
+
+  const babelPlugins: any[] = [
+    [
+      '@babel/plugin-transform-runtime',
+      {
+        regenerator: true,
+      },
+    ],
+    [
+      'import',
+      {
+        libraryName: '@mui/material',
+        libraryDirectory: '',
+        camel2DashComponentName: false,
+      },
+      'core',
+    ],
+    [
+      'import',
+      {
+        libraryName: '@mui/icons-material',
+        libraryDirectory: '',
+        camel2DashComponentName: false,
+      },
+      'icons',
+    ],
+    ['@babel/plugin-proposal-decorators', { legacy: true }],
+  ];
+
+  console.log(process.env.DEBUG, 'process.env.DEBUG');
+  if (!isDebug) {
+    babelPlugins.push('transform-remove-console');
+  }
+
+  if (isDev) {
+    plugins.push(new ReactRefreshPlugin());
+    babelPlugins.push([
+      'react-refresh/babel',
+      {
+        skipEnvCheck: true,
+      },
+    ]);
+  } else {
+    plugins.push(
+      new CopyPlugin({
+        patterns: [{ from: path.resolve(__dirname, './public'), to: path.resolve(__dirname, './dist') }],
+      }) as any,
+      new CompressionPlugin({
+        test: /\.js(\?.*)?$/i,
+      }),
+      new MiniCssExtractPlugin({
+        filename: 'main.[chunkhash:6].css',
+      }),
+    );
+  }
+
+  if (isAnalyze) {
+    // @ts-ignore
+    plugins.push(new BundleAnalyzerPlugin());
+  }
+
+  const config: Configuration = {
+    mode: nodeEnv,
+    output: {
+      path: path.resolve(__dirname, outPath),
+      clean: true,
+      filename: '[name].[chunkhash:6].js',
+    },
+    externals: { 'agora-electron-sdk': 'commonjs2 agora-electron-sdk' },
+    entry: entryPath,
+    module: {
+      //解决Critical dependency: require function is used in a way in which dependencies cannot be statically extracted的问题
+      unknownContextCritical: false,
+      //解决the request of a dependency is an expression
+      exprContextCritical: false,
+      rules: [
+        {
+          test: /\.(ts|js)x?$/i,
+          exclude: /node_modules/,
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                '@babel/preset-env',
+                [
+                  '@babel/preset-react',
+                  {
+                    runtime: 'automatic',
+                  },
+                ],
+                '@babel/preset-typescript',
+              ],
+              plugins: babelPlugins,
+            },
+          },
+        },
+        {
+          test: /\.(less|css)$/i,
+          use: [
+            isDev ? 'style-loader' : MiniCssExtractPlugin.loader,
+            'css-loader',
+            'postcss-loader',
+            {
+              loader: 'less-loader',
+              options: {
+                lessOptions: {
+                  javascriptEnabled: true,
+                },
+              },
+            },
+          ],
+        },
+        {
+          test: /\.(png|jpg|jpeg|gif|webp)$/,
+          use: [
+            {
+              loader: 'url-loader',
+              options: {
+                // 小于 1k 则 base64，大于 1k 则使用 file-loader 处理。
+                limit: 1024,
+              },
+            },
+          ],
+        },
+        {
+          test: /\.(svg)$/i,
+          use: [
+            { loader: 'svg-sprite-loader', options: {} },
+            { loader: 'svgo-loader', options: {} },
+          ],
+        },
+      ],
+    },
+    resolve: {
+      plugins: [
+        new TsconfigPathsPlugin({
+          configFile: tsConfigName,
+        }) as any,
+      ],
+      extensions: ['.tsx', '.ts', '.js'],
+      fallback: {},
+    },
+    plugins,
+    devtool: 'source-map',
+    optimization: {
+      minimizer: [
+        new UglifyjsPlugin({
+          // 使用缓存
+          cache: true,
+          sourceMap: true,
+        }) as any,
+        new CssMinimizerPlugin() as any,
+      ],
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/](agora-rtc-sdk-ng)[\\/]/,
+            name: 'vendor',
+            chunks: 'all',
+          },
+        },
+      },
+      usedExports: true,
+    },
+    devServer: {
+      // static: path.join(__dirname, 'dist'),
+      historyApiFallback: true,
+      port: 4000,
+      open: true,
+      hot: true,
+      allowedHosts: 'all',
+    },
+  };
+
+  return config;
+};
+
+export default genConfig;
