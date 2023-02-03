@@ -16,6 +16,7 @@ const config: Configuration = {
   entry: './src/index.tsx',
   output: {
     filename: 'main.js',
+    clean: true,
     path: path.resolve(__dirname, 'dist'),
   },
   devtool: 'source-map',
@@ -50,7 +51,20 @@ const config: Configuration = {
       },
       {
         test: /\.(css|scss)$/,
-        use: ['style-loader', 'css-loader'],
+        use: [
+          {
+            loader: 'style-loader',
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1,
+            },
+          },
+          {
+            loader: 'postcss-loader',
+          },
+        ],
       },
       {
         test: /\.(jpg|jpeg|png|gif|mp3|svg)$/,
