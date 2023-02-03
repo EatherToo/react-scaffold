@@ -9,9 +9,7 @@ craco.config.js
 tailwind.config.js
 vite.config.js
 postcss.config.js
-webpack.config.ts
-webpack.desktop.config.ts
-webpack.electron.main.config.ts
+# webpack.config.ts
 
 # 忽略 proto 文件和生成产物。
 /src/proto/*

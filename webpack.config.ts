@@ -1,13 +1,18 @@
 // style files regexes
-const cssRegex = /\.css$/;
-const cssModuleRegex = /\.module\.css$/;
-const sassRegex = /\.(scss|sass)$/;
-const sassModuleRegex = /\.module\.(scss|sass)$/;
+// const cssRegex = /\.css$/;
+// const cssModuleRegex = /\.module\.css$/;
+// const sassRegex = /\.(scss|sass)$/;
+// const sassModuleRegex = /\.module\.(scss|sass)$/;
 
-const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-
-module.exports = {
+import path from 'path';
+import HtmlWebpackPlugin from 'html-webpack-plugin';
+import TerserPlugin from 'terser-webpack-plugin';
+import CssMinimizerPlugin from 'css-minimizer-webpack-plugin';
+import ForkTsCheckerWebpackPlugin from 'fork-ts-checker-webpack-plugin';
+import ESLintPlugin from 'eslint-webpack-plugin';
+import TsconfigPathsPlugin from 'tsconfig-paths-webpack-plugin';
+import { Configuration } from 'webpack';
+const config: Configuration = {
   entry: './src/index.tsx',
   output: {
     filename: 'main.js',
@@ -18,6 +23,17 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'public', 'index.html'),
     }),
+    new ForkTsCheckerWebpackPlugin({
+      async: false,
+    }),
+    new ESLintPlugin({
+      extensions: ['js', 'jsx', 'ts', 'tsx'],
+    }),
+    // @ts-ignore
+    // new DotEnv({
+    //   path: `.env.${env.mode}`,
+    //   defaults: '.env',
+    // }),
   ],
   module: {
     // exclude node_modules
@@ -45,13 +61,12 @@ module.exports = {
   // pass all js files through Babel
   resolve: {
     extensions: ['*', '.js', '.jsx', '.ts', '.tsx'],
+    plugins: [new TsconfigPathsPlugin()],
   },
   optimization: {
     minimizer: [
-      new UglifyjsPlugin({
-        // 使用缓存
-        cache: true,
-        sourceMap: true,
+      new TerserPlugin({
+        terserOptions: { sourceMap: true },
       }),
       new CssMinimizerPlugin(),
     ],
@@ -67,11 +82,13 @@ module.exports = {
     // },
     usedExports: true,
   },
+  // @ts-ignore
   devServer: {
-    port: 3000,
     historyApiFallback: true,
+    port: 4000,
     open: true,
     hot: true,
+    allowedHosts: 'all',
   },
   // When importing a module whose path matches one of the following, just
   // assume a corresponding global variable exists and use that instead.
@@ -79,3 +96,5 @@ module.exports = {
   // dependencies, which allows browsers to cache those libraries between builds.
   // externals: { react: 'React', 'react-dom': 'ReactDOM' },
 };
+
+export default config;
