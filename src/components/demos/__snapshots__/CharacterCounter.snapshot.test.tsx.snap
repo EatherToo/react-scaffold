@@ -1,0 +1,33 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[` 1`] = `
+<div>
+  <div>
+    <input
+      onChange={[Function]}
+      type="text"
+      value=""
+    />
+    <br />
+    Echo: 
+  </div>
+  Character Count: 
+  0
+</div>
+`;
+
+exports[`CharacterCounter snapshot unit test bacic test 1`] = `
+<div>
+  <div>
+    <input
+      onChange={[Function]}
+      type="text"
+      value=""
+    />
+    <br />
+    Echo: 
+  </div>
+  Character Count: 
+  0
+</div>
+`;

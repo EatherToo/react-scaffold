@@ -10,6 +10,7 @@ tailwind.config.js
 vite.config.js
 postcss.config.js
 # webpack.config.ts
+jest.config.ts
 
 # 忽略 proto 文件和生成产物。
 /src/proto/*
