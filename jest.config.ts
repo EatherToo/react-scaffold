@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import { pathsToModuleNameMapper } from 'ts-jest';
 import tsconfig from './tsconfig.json';
 /*

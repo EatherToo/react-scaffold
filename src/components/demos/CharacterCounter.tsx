@@ -4,10 +4,10 @@ import { useRecoilValue, useRecoilState } from 'recoil';
 function CharacterCount() {
   const count = useRecoilValue(charCountState);
 
-  return <>Character Count: {count}</>;
+  return <span data-testid="text-show">Character Count: {count}</span>;
 }
 
-function TextInput() {
+export function TextInput() {
   const [text, setText] = useRecoilState(textState);
 
   const onChange = (event: { target: { value: string | ((currVal: string) => string) } }) => {
@@ -16,7 +16,7 @@ function TextInput() {
 
   return (
     <div>
-      <input test-id="qqq" type="text" value={text} onChange={onChange} />
+      <input data-testid="text-input" type="text" value={text} onChange={onChange} />
       <br />
       Echo: {text}
     </div>
@@ -26,7 +26,7 @@ function TextInput() {
 export default function CharacterCounter() {
   return (
     <div>
-      <TextInput />
+      <TextInput test-id="text-input" />
       <CharacterCount />
     </div>
   );
