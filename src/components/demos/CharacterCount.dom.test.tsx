@@ -1,5 +1,6 @@
 /**
  * @jest-environment jsdom
+ * component dom unit testing api refs https://jestjs.io/docs/tutorial-react#dom-testing
  */
 import { cleanup, render, fireEvent } from '@testing-library/react';
 import { RecoilRoot } from 'recoil';
